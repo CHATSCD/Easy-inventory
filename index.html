@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -624,4 +624,991 @@ header {
       <select class="map-select" id="bekMapCase"></select>
     </div>
     <div class="map-row">
-      <div class="map-lab
+      <div class="map-label">Cost</div>
+      <select class="map-select" id="bekMapCost"></select>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn-secondary" onclick="cancelBekMap()">Cancel</button>
+      <button class="btn-primary" onclick="applyBekMap()">Save Master →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="appScreen">
+
+  <header>
+    <div class="h-logo">🥗</div>
+    <div>
+      <div class="h-title">Deli Counter</div>
+      <div class="h-sub" id="sheetName">Keith's Superstores</div>
+    </div>
+    <div class="h-spacer"></div>
+    <div class="h-badge">Updated: <b id="updCt">0</b></div>
+    <input type="file" id="bekFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBekMasterFile(this.files[0]); this.value='';">
+    <button class="icon-btn" title="Load BEK Master spreadsheet" onclick="document.getElementById('bekFileInput').click()">🧾</button>
+    <button class="icon-btn" title="Add item" onclick="openAddItem()">➕</button>
+    <button class="icon-btn" title="Export XLSX" onclick="exportXLSX()">⬇</button>
+    <button class="icon-btn" title="Load new sheet" onclick="switchSheet()">📂</button>
+  </header>
+
+  <!-- Voice zone -->
+  <div class="voice-zone">
+    <div class="voice-row">
+      <div class="orb" id="orb" onclick="toggleVoice()">🎤</div>
+      <div class="voice-info">
+        <div class="voice-status" id="vstatus">TAP ORB OR PRESS SPACE</div>
+        <div class="voice-transcript" id="vtranscript">Say an item name, BEK number, or quantity...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm card -->
+  <div class="confirm-slide" id="confirmSlide">
+    <div class="cs-name" id="csName"></div>
+    <div class="cs-meta" id="csMeta"></div>
+    <div class="cs-extra" id="csExtra"></div>
+    <div class="cs-row">
+      <div class="cs-label">How many did you count?</div>
+      <div class="qty-wrap">
+        <button class="qty-btn" onclick="adj(-1)">−</button>
+        <input class="qty-input" id="qtyNum" type="number" step="any" inputmode="decimal" value="1" oninput="qtyInputChanged()">
+        <button class="qty-btn" onclick="adj(1)">+</button>
+      </div>
+    </div>
+    <div class="cs-actions">
+      <button class="btn btn-x" onclick="cancelConfirm()">Cancel</button>
+      <button class="btn btn-ok" onclick="confirmSave()">✓ Save Count</button>
+    </div>
+  </div>
+
+  <!-- Multiple matches -->
+  <div class="matches-slide" id="matchesSlide">
+    <div class="ms-title">Multiple matches — which one?</div>
+    <div class="ms-items" id="msList"></div>
+  </div>
+
+  <!-- Search + filters -->
+  <div class="controls">
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="Search by name or item #..." oninput="renderList()">
+      <span class="search-icon">🔍</span>
+    </div>
+    <div class="filter-row" id="filterRow"></div>
+  </div>
+
+  <!-- Column headings (mirrors uploaded sheet) -->
+  <div class="list-col-header" id="listColHeader"></div>
+
+  <!-- Item list -->
+  <div id="itemList"></div>
+
+</div>
+
+<!-- ══════════════ ADD / EDIT ITEM MODAL ══════════════ -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <div class="modal-title" id="itemModalTitle">Add Item</div>
+    <div class="modal-sub" id="itemModalSub">Add a new item to today's count.</div>
+
+    <div class="map-row">
+      <div class="map-label">Description / Name *</div>
+      <input class="map-select" id="editDesc" type="text" placeholder="e.g. Bag Sandwich 6x.75x6.75">
+    </div>
+    <div class="map-row">
+      <div class="map-label">BEK # / Item #</div>
+      <input class="map-select" id="editBek" type="text" placeholder="e.g. 875138">
+    </div>
+    <div class="map-row">
+      <div class="map-label">On Hand Qty</div>
+      <input class="map-select" id="editOnHand" type="number" step="any" placeholder="0">
+    </div>
+    <div class="map-row">
+      <div class="map-label">Unit / Pack Size</div>
+      <input class="map-select" id="editUnit" type="text" placeholder="e.g. per Box (1/2000 CT)">
+    </div>
+    <div class="map-row">
+      <div class="map-label">Storage Location</div>
+      <input class="map-select" id="editStorage" type="text" placeholder="e.g. Dry Container" list="storageOptions">
+      <datalist id="storageOptions"></datalist>
+    </div>
+    <div class="map-row">
+      <div class="map-label">Cost (optional)</div>
+      <input class="map-select" id="editCost" type="number" step="0.01" placeholder="0.00">
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn-secondary" id="deleteItemBtn" style="display:none; background:#ef444422; border-color:#ef444455; color:#ef4444;" onclick="deleteEditingItem()">🗑 Delete</button>
+      <button class="btn-secondary" onclick="closeItemModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveItemModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SWITCH SHEET CONFIRM MODAL ══════════════ -->
+<div class="modal-overlay" id="switchModal">
+  <div class="modal">
+    <div class="modal-title">⚠️ Load a new sheet?</div>
+    <div class="modal-sub">This replaces today's inventory. You have <b id="switchUpdCt" style="color:var(--accent)">0</b> counted item(s) not yet exported. Export first so you don't lose them.</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSwitchModal()">Cancel</button>
+      <button class="btn-secondary" onclick="exportXLSX(); doSwitchSheet();">⬇ Export, then switch</button>
+      <button class="btn-primary" style="background:#ef4444;" onclick="doSwitchSheet()">Switch anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let items = [];          // [{row, bek, desc, on_hand, unit, storage, cost, raw, master}, ...]
+let updatedRows = new Set();
+let pendingItem = null;
+let pendingQty = 0;
+let recognition = null;
+let listening = false;
+let activeFilter = 'All';
+let rawSheetData = null; // { headers, rows, fileName }
+let colMap = {};         // {desc, bek, on_hand, unit, storage, cost} → col index
+let colLabels = {};      // {desc, bek, on_hand, unit, storage} → actual header text from uploaded sheet
+
+let bekMaster = {};       // { [bekNumber]: {desc, casePack, cost} }
+let rawBekData = null;    // { headers, rows }
+
+const STORAGE_KEY = 'deliCounterInventory_v2';
+const MAP_KEY = 'deliCounterColMap_v1';
+const BEK_MASTER_KEY = 'deliCounterBekMaster_v1';
+const BEK_MAP_KEY = 'deliCounterBekColMap_v1';
+
+loadBekMasterFromStorage();
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILE UPLOAD (daily count sheet)
+// ═══════════════════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function showLoading(msg) {
+  document.getElementById('loadingBar').style.display = 'block';
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingFill').style.width = '60%';
+}
+function hideLoading() {
+  document.getElementById('loadingBar').style.display = 'none';
+  document.getElementById('loadingMsg').style.display = 'none';
+}
+
+function readWorkbook(file, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let workbook;
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'csv') {
+        workbook = XLSX.read(e.target.result, { type: 'string' });
+      } else {
+        workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      }
+      const sheetName = workbook.SheetNames[0];
+      const ws = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      let headerRow = 0;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        if (rows[i].some(c => String(c).trim().length > 0)) { headerRow = i; break; }
+      }
+      const headers = rows[headerRow].map(h => String(h).trim());
+      const dataRows = rows.slice(headerRow + 1).filter(r => r.some(c => String(c).trim()));
+      cb(null, { headers, rows: dataRows });
+    } catch(err) {
+      cb(err);
+    }
+  };
+  reader.onerror = () => cb(new Error('File read failed'));
+  if (file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  showLoading('Reading ' + file.name + '...');
+  readWorkbook(file, (err, data) => {
+    hideLoading();
+    if (err) { showToast('Could not read file: ' + err.message, true); return; }
+    document.getElementById('sheetName').textContent = file.name.replace(/\.[^.]+$/, '');
+    rawSheetData = { headers: data.headers, rows: data.rows, fileName: file.name };
+    openMapModal(data.headers, data.rows);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  COLUMN MAPPING MODAL (daily count sheet)
+// ═══════════════════════════════════════════════════════════════════
+function openMapModal(headers, dataRows) {
+  const pt = document.getElementById('previewTable');
+  pt.innerHTML = '';
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  headers.forEach(h => { const th = document.createElement('th'); th.textContent = h || '(empty)'; hrow.appendChild(th); });
+  thead.appendChild(hrow);
+  pt.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  dataRows.slice(0, 4).forEach(row => {
+    const tr = document.createElement('tr');
+    headers.forEach((_, i) => { const td = document.createElement('td'); td.textContent = String(row[i] || ''); tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  pt.appendChild(tbody);
+
+  const savedMap = JSON.parse(localStorage.getItem(MAP_KEY) || '{}');
+  const selects = { desc: 'mapDesc', bek: 'mapBek', on_hand: 'mapOnHand', unit: 'mapUnit', storage: 'mapStorage', cost: 'mapCost' };
+  const autoDetect = {
+    desc: ['description', 'product description', 'item', 'name', 'item name', 'desc', 'product'],
+    bek: ['bek', 'item #', 'item#', 'sku', 'number', 'bek item', 'item number', 'code'],
+    on_hand: ['on hand', 'onhand', 'qty', 'quantity', 'count', 'in stock', 'stock'],
+    unit: ['unit', 'pack', 'size', 'unit label', 'pack size', 'uom'],
+    storage: ['storage', 'location', 'area', 'zone', 'section'],
+    cost: ['cost', 'price', 'unit cost', 'case cost']
+  };
+
+  Object.entries(selects).forEach(([key, selId]) => {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = '<option value="-1">(skip)</option>';
+    headers.forEach((h, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = h || `Column ${i+1}`;
+      sel.appendChild(opt);
+    });
+    let found = -1;
+    if (savedMap[key] !== undefined && headers[savedMap[key]] !== undefined) {
+      found = savedMap[key];
+    } else {
+      found = headers.findIndex(h =>
+        autoDetect[key].some(kw => h.toLowerCase().replace(/[^a-z0-9]/g,' ').includes(kw))
+      );
+    }
+    sel.value = found >= 0 ? found : -1;
+  });
+
+  document.getElementById('mapModal').classList.add('visible');
+}
+
+function cancelMap() {
+  document.getElementById('mapModal').classList.remove('visible');
+  rawSheetData = null;
+}
+
+function applyMap() {
+  const map = {
+    desc: parseInt(document.getElementById('mapDesc').value),
+    bek: parseInt(document.getElementById('mapBek').value),
+    on_hand: parseInt(document.getElementById('mapOnHand').value),
+    unit: parseInt(document.getElementById('mapUnit').value),
+    storage: parseInt(document.getElementById('mapStorage').value),
+    cost: parseInt(document.getElementById('mapCost').value)
+  };
+
+  if (map.desc < 0) { showToast('Description column is required', true); return; }
+
+  localStorage.setItem(MAP_KEY, JSON.stringify(map));
+
+  const headers = rawSheetData.headers;
+  colLabels = {
+    desc: (map.desc >= 0 && headers[map.desc]) || 'Description',
+    bek: (map.bek >= 0 && headers[map.bek]) || 'BEK#',
+    on_hand: (map.on_hand >= 0 && headers[map.on_hand]) || 'On Hand',
+    unit: (map.unit >= 0 && headers[map.unit]) || 'Unit',
+    storage: (map.storage >= 0 && headers[map.storage]) || 'Storage'
+  };
+
+  items = rawSheetData.rows
+    .map((row, i) => {
+      const desc = String(row[map.desc] || '').replace(/\n/g, ' ').trim();
+      if (!desc) return null;
+      const raw = {};
+      headers.forEach((h, idx) => { if (h) raw[h] = String(row[idx] || '').trim(); });
+      const costVal = map.cost >= 0 ? parseFloat(String(row[map.cost]).replace(/[^0-9.]/g, '')) : NaN;
+      return {
+        row: i + 2,
+        desc,
+        bek: map.bek >= 0 ? String(row[map.bek] || '').trim() : '',
+        on_hand: map.on_hand >= 0 ? (parseFloat(row[map.on_hand]) || 0) : 0,
+        unit: map.unit >= 0 ? String(row[map.unit] || '').trim() : '',
+        storage: map.storage >= 0 ? String(row[map.storage] || '').trim() : '',
+        cost: isNaN(costVal) ? null : costVal,
+        raw
+      };
+    })
+    .filter(Boolean);
+
+  updatedRows = new Set();
+  document.getElementById('mapModal').classList.remove('visible');
+  mergeBekMaster();
+  saveToStorage();
+  launchApp();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  BEK MASTER SPREADSHEET (case pack / description / cost lookup)
+// ═══════════════════════════════════════════════════════════════════
+function loadBekMasterFromStorage() {
+  try {
+    const saved = localStorage.getItem(BEK_MASTER_KEY);
+    bekMaster = saved ? JSON.parse(saved) : {};
+  } catch(e) { bekMaster = {}; }
+}
+
+function handleBekMasterFile(file) {
+  if (!file) return;
+  showToast('Reading ' + file.name + '...');
+  readWorkbook(file, (err, data) => {
+    if (err) { showToast('Could not read BEK file: ' + err.message, true); return; }
+    rawBekData = data;
+    openBekMapModal(data.headers, data.rows);
+  });
+}
+
+function openBekMapModal(headers, dataRows) {
+  const pt = document.getElementById('bekPreviewTable');
+  pt.innerHTML = '';
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  headers.forEach(h => { const th = document.createElement('th'); th.textContent = h || '(empty)'; hrow.appendChild(th); });
+  thead.appendChild(hrow);
+  pt.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  dataRows.slice(0, 4).forEach(row => {
+    const tr = document.createElement('tr');
+    headers.forEach((_, i) => { const td = document.createElement('td'); td.textContent = String(row[i] || ''); tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  pt.appendChild(tbody);
+
+  const savedMap = JSON.parse(localStorage.getItem(BEK_MAP_KEY) || '{}');
+  const selects = { bek: 'bekMapBek', desc: 'bekMapDesc', casePack: 'bekMapCase', cost: 'bekMapCost' };
+  const autoDetect = {
+    bek: ['bek', 'item #', 'item#', 'sku', 'number', 'item number', 'code'],
+    desc: ['description', 'product description', 'item', 'name', 'item name', 'desc', 'product'],
+    casePack: ['case pack', 'casepack', 'pack', 'pack size', 'unit', 'uom', 'size'],
+    cost: ['cost', 'price', 'unit cost', 'case cost']
+  };
+  Object.entries(selects).forEach(([key, selId]) => {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = '<option value="-1">(skip)</option>';
+    headers.forEach((h, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = h || `Column ${i+1}`;
+      sel.appendChild(opt);
+    });
+    let found = -1;
+    if (savedMap[key] !== undefined && headers[savedMap[key]] !== undefined) found = savedMap[key];
+    else found = headers.findIndex(h => autoDetect[key].some(kw => h.toLowerCase().replace(/[^a-z0-9]/g,' ').includes(kw)));
+    sel.value = found >= 0 ? found : -1;
+  });
+  document.getElementById('bekMapModal').classList.add('visible');
+}
+
+function cancelBekMap() {
+  document.getElementById('bekMapModal').classList.remove('visible');
+  rawBekData = null;
+}
+
+function applyBekMap() {
+  const map = {
+    bek: parseInt(document.getElementById('bekMapBek').value),
+    desc: parseInt(document.getElementById('bekMapDesc').value),
+    casePack: parseInt(document.getElementById('bekMapCase').value),
+    cost: parseInt(document.getElementById('bekMapCost').value)
+  };
+  if (map.bek < 0) { showToast('BEK # column is required', true); return; }
+  localStorage.setItem(BEK_MAP_KEY, JSON.stringify(map));
+
+  const newMaster = {};
+  rawBekData.rows.forEach(row => {
+    const bek = String(row[map.bek] || '').trim();
+    if (!bek) return;
+    const costVal = map.cost >= 0 ? parseFloat(String(row[map.cost]).replace(/[^0-9.]/g, '')) : NaN;
+    newMaster[bek] = {
+      desc: map.desc >= 0 ? String(row[map.desc] || '').trim() : '',
+      casePack: map.casePack >= 0 ? String(row[map.casePack] || '').trim() : '',
+      cost: isNaN(costVal) ? null : costVal
+    };
+  });
+  bekMaster = newMaster;
+  localStorage.setItem(BEK_MASTER_KEY, JSON.stringify(bekMaster));
+  document.getElementById('bekMapModal').classList.remove('visible');
+  mergeBekMaster();
+  saveToStorage();
+  showToast(`✓ BEK Master loaded (${Object.keys(bekMaster).length} items)`);
+  renderList();
+}
+
+function mergeBekMaster() {
+  if (!items.length) return;
+  const keys = Object.keys(bekMaster);
+  items.forEach(item => {
+    if (keys.length && item.bek && bekMaster[item.bek]) {
+      item.master = bekMaster[item.bek];
+    } else {
+      delete item.master;
+    }
+  });
+}
+
+function itemHasDiff(item) {
+  if (!item.master) return false;
+  const m = item.master;
+  if (m.cost != null && item.cost != null && Math.abs(m.cost - item.cost) > 0.001) return true;
+  if (m.casePack && item.unit && norm(m.casePack) !== norm(item.unit)) return true;
+  if (m.desc && norm(m.desc) !== norm(item.desc)) return true;
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LAUNCH APP
+// ═══════════════════════════════════════════════════════════════════
+function launchApp() {
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.add('visible');
+  buildFilters();
+  renderColHeader();
+  renderList();
+  updateBadge();
+}
+
+function renderColHeader() {
+  const el = document.getElementById('listColHeader');
+  el.innerHTML = `
+    <div class="i-bek">${colLabels.bek || 'BEK#'}</div>
+    <div class="i-desc">${colLabels.desc || 'Description'}</div>
+    <div class="i-unit">${colLabels.unit || 'Unit'}</div>
+    <div class="i-qty">${colLabels.on_hand || 'Qty'}</div>
+    <div style="width:26px"></div>`;
+}
+
+function switchSheet() {
+  document.getElementById('switchUpdCt').textContent = updatedRows.size;
+  document.getElementById('switchModal').classList.add('visible');
+}
+function closeSwitchModal() {
+  document.getElementById('switchModal').classList.remove('visible');
+}
+function doSwitchSheet() {
+  document.getElementById('switchModal').classList.remove('visible');
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('uploadScreen').style.display = 'flex';
+  document.getElementById('fileInput').value = '';
+  stopListening();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ADD / EDIT / DELETE ITEMS
+// ═══════════════════════════════════════════════════════════════════
+let editingRow = null; // null = adding new item
+
+function nextRowId() {
+  return items.length ? Math.max(...items.map(i => i.row)) + 1 : 2;
+}
+
+function openAddItem() {
+  editingRow = null;
+  document.getElementById('itemModalTitle').textContent = 'Add Item';
+  document.getElementById('itemModalSub').textContent = "Add a new item to today's count.";
+  document.getElementById('editDesc').value = '';
+  document.getElementById('editBek').value = '';
+  document.getElementById('editOnHand').value = '';
+  document.getElementById('editUnit').value = '';
+  document.getElementById('editStorage').value = activeFilter !== 'All' ? activeFilter : '';
+  document.getElementById('editCost').value = '';
+  document.getElementById('deleteItemBtn').style.display = 'none';
+  populateStorageOptions();
+  document.getElementById('itemModal').classList.add('visible');
+  setTimeout(() => document.getElementById('editDesc').focus(), 50);
+}
+
+function openEditItem(row) {
+  const item = items.find(i => i.row === row);
+  if (!item) return;
+  editingRow = row;
+  document.getElementById('itemModalTitle').textContent = 'Edit Item';
+  document.getElementById('itemModalSub').textContent = 'Update this item\'s details.';
+  document.getElementById('editDesc').value = item.desc;
+  document.getElementById('editBek').value = item.bek;
+  document.getElementById('editOnHand').value = item.on_hand;
+  document.getElementById('editUnit').value = item.unit;
+  document.getElementById('editStorage').value = item.storage;
+  document.getElementById('editCost').value = item.cost != null ? item.cost : '';
+  document.getElementById('deleteItemBtn').style.display = 'block';
+  populateStorageOptions();
+  document.getElementById('itemModal').classList.add('visible');
+}
+
+function populateStorageOptions() {
+  const dl = document.getElementById('storageOptions');
+  dl.innerHTML = '';
+  [...new Set(items.map(i => i.storage).filter(Boolean))].forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    dl.appendChild(opt);
+  });
+}
+
+function closeItemModal() {
+  document.getElementById('itemModal').classList.remove('visible');
+  editingRow = null;
+}
+
+function saveItemModal() {
+  const desc = document.getElementById('editDesc').value.trim();
+  if (!desc) { showToast('Description is required', true); return; }
+  const bek = document.getElementById('editBek').value.trim();
+  const on_hand = parseFloat(document.getElementById('editOnHand').value) || 0;
+  const unit = document.getElementById('editUnit').value.trim();
+  const storage = document.getElementById('editStorage').value.trim();
+  const costRaw = document.getElementById('editCost').value;
+  const cost = costRaw !== '' ? parseFloat(costRaw) : null;
+
+  if (editingRow === null) {
+    const row = nextRowId();
+    items.push({ row, desc, bek, on_hand, unit, storage, cost });
+    mergeBekMaster();
+    updatedRows.add(row);
+    showToast(`✓ Added ${desc}`);
+  } else {
+    const item = items.find(i => i.row === editingRow);
+    if (item) {
+      Object.assign(item, { desc, bek, on_hand, unit, storage, cost });
+      mergeBekMaster();
+      updatedRows.add(item.row);
+      showToast(`✓ Updated ${desc}`);
+    }
+  }
+  saveToStorage();
+  updateBadge();
+  buildFilters();
+  closeItemModal();
+  renderList();
+}
+
+function deleteEditingItem() {
+  if (editingRow === null) return;
+  const item = items.find(i => i.row === editingRow);
+  if (!item) return;
+  if (!confirm(`Delete "${item.desc}" from today's count?`)) return;
+  items = items.filter(i => i.row !== editingRow);
+  updatedRows.delete(editingRow);
+  saveToStorage();
+  updateBadge();
+  buildFilters();
+  closeItemModal();
+  renderList();
+  showToast('🗑 Item deleted');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SAMPLE DATA (built-in fallback)
+// ═══════════════════════════════════════════════════════════════════
+const SAMPLE = [{"row":2,"bek":"698007","desc":"Food Release Oil Base Pan Spray","on_hand":0,"unit":"per Can (6/17Oz)","storage":"Dry"},{"row":3,"bek":"191379","desc":"Bag Fry Paper","on_hand":0,"unit":"per Box (1/2000)","storage":"Dry Container"},{"row":4,"bek":"875138","desc":"Bag Sandwich","on_hand":0,"unit":"per Box (1/2000 CT)","storage":"Dry Container"},{"row":8,"bek":"870030","desc":"Container Foam 12 Ounce","on_hand":0,"unit":"per Sleeve (20/25Cnt)","storage":"Dry Container"},{"row":9,"bek":"79400","desc":"Container Foam 16 Ounce","on_hand":0,"unit":"per Sleeve (20/25Cnt)","storage":"Dry Container"},{"row":19,"bek":"136286","desc":"Cutlery Kit Knife Fork Spoon","on_hand":0,"unit":"per Case (1/250Cnt)","storage":"Dry Container"},{"row":28,"bek":"DT310","desc":"Napkins 13X8.5","on_hand":0,"unit":"per Pack (12/500)","storage":"Dry Container"},{"row":30,"bek":"190557","desc":"Bean Baked Original","on_hand":0,"unit":"per Bag (6/#10 CAN)","storage":"Dry Food"},{"row":31,"bek":"693014","desc":"Breading Fish Fry New Orleans","on_hand":0,"unit":"per Case (1/25 LB)","storage":"Dry Food"},{"row":43,"bek":"797230","desc":"Gravy Mix Pepper Biscuit","on_hand":0,"unit":"per Bag (6/24 OZ)","storage":"Dry Food"},{"row":44,"bek":"797032","desc":"Gravy Mix Brown","on_hand":0,"unit":"per Bag (6/14 OZ)","storage":"Dry Food"},{"row":46,"bek":"799424","desc":"Cereal Grits Quick White","on_hand":0,"unit":"per Bag (8/5 LB)","storage":"Dry Food"},{"row":54,"bek":"119451","desc":"Mayonnaise Extra Heavy Duty","on_hand":0,"unit":"per Jug (4/1 GAL)","storage":"Dry Food"},{"row":64,"bek":"121396","desc":"Rice Jambalaya Mix","on_hand":0,"unit":"per Box (8/2.5 Lb)","storage":"Dry Food"},{"row":65,"bek":"301052","desc":"Rice Parboiled","on_hand":0,"unit":"per Case (1/25 LB)","storage":"Dry Food"},{"row":68,"bek":"326604","desc":"Appetizer Onion Ring","on_hand":0,"unit":"per Bag (6/2.5Lb)","storage":"Frozen"},{"row":71,"bek":"506121","desc":"Beef Patty 3/1 Thick N Tender","on_hand":0,"unit":"per Case (60/5.33 OZ)","storage":"Frozen"},{"row":72,"bek":"188915","desc":"Beef Sandwich Steak Philly","on_hand":0,"unit":"per Case (40/4 OZ)","storage":"Frozen"},{"row":75,"bek":"189664","desc":"Bun Hot Dog 6 In Frozen","on_hand":0,"unit":"per Pack (8/12 CT)","storage":"Frozen"},{"row":76,"bek":"394690","desc":"Bun Hamburger 5 In Sliced","on_hand":0,"unit":"per Pack (64/3.5 OZ)","storage":"Frozen"},{"row":85,"bek":"151017","desc":"Chicken Breast Flame Grilled","on_hand":0,"unit":"per Bag (40/4 OZ)","storage":"Frozen"},{"row":86,"bek":"138142","desc":"Chicken Patty Breaded Raw","on_hand":0,"unit":"per Case (2/5 LB)","storage":"Frozen"},{"row":93,"bek":"370013","desc":"Corn Dog Chicken Jalapeno","on_hand":0,"unit":"per Case (36/4 OZ)","storage":"Frozen"},{"row":94,"bek":"370008","desc":"Corn Dog Chicken","on_hand":0,"unit":"per Case (72/4 OZ)","storage":"Frozen"},{"row":97,"bek":"412862","desc":"Dough Biscuit 3 In Sliced","on_hand":0,"unit":"per Case (168/3.17 OZ)","storage":"Frozen"},{"row":109,"bek":"109014","desc":"Hushpuppy Corn Sweet","on_hand":0,"unit":"per Bag (2/5 LB)","storage":"Frozen"},{"row":111,"bek":"131091","desc":"Macaroni & Cheese Homestyle","on_hand":0,"unit":"per Bag (4/5 LB)","storage":"Frozen"},{"row":115,"bek":"226619","desc":"Okra Cut Lightly Breaded","on_hand":0,"unit":"per Bag (4/5 LB)","storage":"Frozen"},{"row":116,"bek":"453005","desc":"Catfish Fillet Split 3-5 Oz","on_hand":0,"unit":"per Case (1/15 LB)","storage":"Frozen"},{"row":119,"bek":"534047","desc":"Pork Chop Boneless Breaded","on_hand":0,"unit":"per Case (40/4 OZ)","storage":"Frozen"},{"row":122,"bek":"363433","desc":"Potato Mashed Deluxe","on_hand":0,"unit":"per Bag (4/6 LB)","storage":"Frozen"},{"row":125,"bek":"530572","desc":"Bacon Layout 18/22","on_hand":0,"unit":"per Case (1/15 LB)","storage":"Refrigerator"},{"row":130,"bek":"121802","desc":"Cheese American Yellow Sliced","on_hand":0,"unit":"per Sleeve (4/5 Lb)","storage":"Refrigerator"},{"row":131,"bek":"16063","desc":"Cheese Cheddar Yellow Shredded","on_hand":0,"unit":"per Bag (1/5 Lb)","storage":"Refrigerator"},{"row":135,"bek":"550400","desc":"Chicken Tenderloin Jumbo","on_hand":0,"unit":"per Case (4/10 LB)","storage":"Refrigerator"},{"row":140,"bek":"142365","desc":"Egg Fresh Shell Med Usda Aa","on_hand":0,"unit":"per Flat (12 flats/case)","storage":"Refrigerator"},{"row":142,"bek":"26761","desc":"Onion Yellow Large Fresh","on_hand":0,"unit":"per Case (1/5 Lb)","storage":"Refrigerator"},{"row":165,"bek":"115570","desc":"Seasoning Creole Original","on_hand":0,"unit":"per Jug (4/8 LB)","storage":"Dry Food"},{"row":166,"bek":"779123","desc":"Shortening Clear Fry Liquid","on_hand":0,"unit":"per Jug (1/35 LB)","storage":"Dry Food"},{"row":167,"bek":"158888","desc":"Shrimp Raw 31-40 Ct","on_hand":0,"unit":"per Bag (5/2 LB)","storage":"Frozen"},{"row":180,"bek":"792054","desc":"Topping Caramel","on_hand":0,"unit":"per Can (6/66 Oz)","storage":"Dry Food"},{"row":181,"bek":"20562","desc":"Topping Heath Bar Chopped","on_hand":0,"unit":"per Bag (2/5 Lb)","storage":"Refrigerator"},{"row":194,"bek":"PACK","desc":"Bayou Blend Pork","on_hand":0,"unit":"","storage":"Local"},{"row":195,"bek":"PACK","desc":"Bayou Blend Alligator","on_hand":0,"unit":"","storage":"Local"},{"row":202,"bek":"BAG","desc":"Gizzards","on_hand":0,"unit":"","storage":"Local"},{"row":203,"bek":"BAG","desc":"Livers","on_hand":0,"unit":"","storage":"Local"},{"row":205,"bek":"CASE","desc":"Kolache Boudin Link Org","on_hand":0,"unit":"","storage":"Local"},{"row":210,"bek":"CASE","desc":"Chicken Fajita","on_hand":0,"unit":"","storage":"Local"}];
+
+function loadSampleData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      items = d.items;
+      updatedRows = new Set(d.updated || []);
+      colLabels = d.colLabels || {};
+      document.getElementById('sheetName').textContent = d.sheetName || 'Demo Inventory';
+      mergeBekMaster();
+      launchApp();
+      return;
+    } catch(e) {}
+  }
+  items = SAMPLE.map(i => ({...i}));
+  updatedRows = new Set();
+  colLabels = { desc: 'Description', bek: 'BEK#', on_hand: 'On Hand', unit: 'Unit', storage: 'Storage' };
+  document.getElementById('sheetName').textContent = 'Demo Inventory';
+  mergeBekMaster();
+  launchApp();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOCAL STORAGE
+// ═══════════════════════════════════════════════════════════════════
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      items,
+      updated: [...updatedRows],
+      sheetName: document.getElementById('sheetName').textContent,
+      colLabels
+    }));
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VOICE
+// ═══════════════════════════════════════════════════════════════════
+function toggleVoice() {
+  listening ? stopListening() : startListening();
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('Voice input needs Chrome or Edge (desktop/Android). Safari and in-app browsers often block it.', true);
+    return;
+  }
+  // Ask for mic permission explicitly first — many mobile/webview contexts
+  // silently fail SpeechRecognition without this, which looks like "nothing happens".
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(t => t.stop());
+        beginRecognition(SR);
+      })
+      .catch(() => {
+        showToast('Microphone permission blocked. Allow mic access for this site in your browser settings.', true);
+      });
+  } else {
+    beginRecognition(SR);
+  }
+}
+
+function beginRecognition(SR) {
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+  recognition.onstart = () => {
+    listening = true;
+    document.getElementById('orb').classList.add('active');
+    document.getElementById('vstatus').className = 'voice-status active';
+    document.getElementById('vstatus').textContent = 'LISTENING...';
+    setTranscript('', true);
+  };
+  recognition.onresult = e => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    setTranscript(final || interim, true);
+    if (final) handleVoice(final.trim());
+  };
+  recognition.onerror = e => {
+    let msg = 'Voice error: ' + e.error;
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') msg = 'Microphone permission denied. Enable mic access and try again.';
+    else if (e.error === 'no-speech') msg = 'No speech detected — try again.';
+    else if (e.error === 'audio-capture') msg = 'No microphone found.';
+    else if (e.error === 'network') msg = 'Voice recognition network error.';
+    showToast(msg, true);
+    stopListening();
+  };
+  recognition.onend = () => stopListening();
+  try {
+    recognition.start();
+  } catch(err) {
+    showToast('Could not start voice recognition: ' + err.message, true);
+    stopListening();
+  }
+}
+
+function stopListening() {
+  listening = false;
+  if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
+  document.getElementById('orb').classList.remove('active');
+  document.getElementById('vstatus').className = 'voice-status';
+  document.getElementById('vstatus').textContent = 'TAP ORB OR PRESS SPACE';
+}
+
+function setTranscript(text, active) {
+  const el = document.getElementById('vtranscript');
+  el.textContent = text || 'Say an item name, BEK number, or quantity...';
+  el.className = 'voice-transcript' + (active && text ? ' active' : '');
+}
+
+function handleVoice(text) {
+  let qty = null;
+  const numMatch = text.match(/\b(\d+(\.\d+)?)\b/);
+  if (numMatch) qty = parseFloat(numMatch[1]);
+
+  let search = text
+    .replace(/\b(i have|i saved|i counted|saved|counted|we have|on hand|i got|there('s| is)?|it('s| is)?|about|approximately|just|only)\b/gi, '')
+    .replace(/\b\d+(\.\d+)?\b/g, '')
+    .replace(/\b(cases?|bags?|boxes?|packs?|sleeves?|units?|cans?|jugs?|jars?|each|flats?)\b/gi, '')
+    .trim();
+
+  if (!search && qty !== null) {
+    if (pendingItem) {
+      pendingQty = qty;
+      document.getElementById('qtyNum').value = qty;
+      return;
+    }
+  }
+
+  const matches = findMatches(search || text);
+  if (!matches.length) {
+    setTranscript(`No match for "${search || text}"`, false);
+    showToast('Nothing matched. Try searching below.', true);
+  } else if (matches.length === 1) {
+    openConfirm(matches[0], qty !== null ? qty : 1);
+  } else {
+    openMatches(matches, qty !== null ? qty : 1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FUZZY SEARCH
+// ═══════════════════════════════════════════════════════════════════
+function norm(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function score(item, q) {
+  const d = norm(item.desc), b = item.bek.toLowerCase(), nq = norm(q);
+  if (b === nq) return 100;
+  if (b.startsWith(nq)) return 90;
+  if (d === nq) return 85;
+  if (d.startsWith(nq)) return 78;
+  const words = nq.split(' ').filter(w => w.length > 1);
+  if (!words.length) return 0;
+  const hits = words.filter(w => d.includes(w) || b.includes(w));
+  if (hits.length === words.length) return 55 + hits.length * 3;
+  if (hits.length > 0) return 20 + hits.length * 8;
+  return 0;
+}
+function findMatches(q) {
+  if (!q.trim()) return [];
+  return items
+    .map(item => ({ item, s: score(item, q) }))
+    .filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 6)
+    .map(x => x.item);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIRM / MATCHES
+// ═══════════════════════════════════════════════════════════════════
+function openConfirm(item, qty = 1) {
+  pendingItem = item;
+  pendingQty = qty;
+  document.getElementById('csName').textContent = item.desc;
+  const bekLabel = colLabels.bek || 'BEK#';
+  const parts = [item.bek && `${bekLabel} ${item.bek}`, item.storage, item.unit].filter(Boolean);
+  document.getElementById('csMeta').textContent = parts.join(' · ');
+  document.getElementById('qtyNum').value = qty;
+
+  const extraEl = document.getElementById('csExtra');
+  extraEl.innerHTML = '';
+  const mappedHeaders = [colLabels.desc, colLabels.bek, colLabels.on_hand, colLabels.unit, colLabels.storage]
+    .filter(Boolean).map(x => x.toLowerCase());
+
+  const addField = (label, value, isDiff) => {
+    if (value === undefined || value === null || value === '') return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<div class="cs-field-label">${label}</div><div class="cs-field-value${isDiff ? ' diff' : ''}">${value}</div>`;
+    extraEl.appendChild(wrap);
+  };
+
+  // All other columns straight from the uploaded sheet, so nothing is hidden
+  if (item.raw) {
+    Object.entries(item.raw).forEach(([h, v]) => {
+      if (!v || mappedHeaders.includes(h.toLowerCase())) return;
+      addField(h, v, false);
+    });
+  }
+
+  // BEK master fields, highlighted when they disagree with the daily sheet
+  if (item.master) {
+    if (item.master.casePack) {
+      const diff = item.unit && norm(item.unit) !== norm(item.master.casePack);
+      addField('Case Pack (BEK Master)', item.master.casePack, diff);
+    }
+    if (item.master.desc) {
+      const diff = norm(item.master.desc) !== norm(item.desc);
+      addField('Description (BEK Master)', item.master.desc, diff);
+    }
+    if (item.master.cost != null) {
+      const diff = item.cost != null && Math.abs(item.cost - item.master.cost) > 0.001;
+      addField('Cost (BEK Master)', '$' + item.master.cost.toFixed(2), diff);
+      if (item.cost != null) addField('Cost (Sheet)', '$' + item.cost.toFixed(2), diff);
+    }
+  }
+
+  document.getElementById('confirmSlide').classList.add('visible');
+  document.getElementById('matchesSlide').classList.remove('visible');
+  setTranscript(`Found: ${item.desc}`, true);
+}
+
+function cancelConfirm() {
+  document.getElementById('confirmSlide').classList.remove('visible');
+  document.getElementById('matchesSlide').classList.remove('visible');
+  pendingItem = null;
+  setTranscript('', false);
+}
+
+function qtyInputChanged() {
+  const v = parseFloat(document.getElementById('qtyNum').value);
+  pendingQty = isNaN(v) ? 0 : v;
+}
+
+function adj(d) {
+  pendingQty = Math.max(0, Math.round((pendingQty + d) * 100) / 100);
+  document.getElementById('qtyNum').value = pendingQty;
+}
+
+function confirmSave() {
+  if (!pendingItem) return;
+  qtyInputChanged();
+  pendingItem.on_hand = pendingQty;
+  updatedRows.add(pendingItem.row);
+  saveToStorage();
+  updateBadge();
+  showToast(`✓ ${pendingItem.desc} → ${pendingQty}`);
+  setTranscript(`Saved: ${pendingItem.desc} = ${pendingQty}`, true);
+  document.getElementById('confirmSlide').classList.remove('visible');
+  const saved = pendingItem;
+  pendingItem = null;
+  renderList(saved.row);
+}
+
+function openMatches(matches, qty) {
+  const list = document.getElementById('msList');
+  list.innerHTML = '';
+  matches.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'ms-item';
+    div.innerHTML = `
+      <div class="ms-desc">${item.desc}</div>
+      <div class="ms-bek">${item.bek}</div>
+      <div class="ms-storage">${item.storage || '—'}</div>`;
+    div.onclick = () => openConfirm(item, qty);
+    list.appendChild(div);
+  });
+  document.getElementById('matchesSlide').classList.add('visible');
+  document.getElementById('confirmSlide').classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILTERS + LIST
+// ═══════════════════════════════════════════════════════════════════
+function buildFilters() {
+  const raw = [...new Set(items.map(i => i.storage).filter(Boolean).map(s => s.trim()))];
+  const row = document.getElementById('filterRow');
+  row.innerHTML = '';
+  ['All', ...raw].forEach(label => {
+    const div = document.createElement('div');
+    div.className = 'ftab' + (label === activeFilter ? ' on' : '');
+    div.textContent = label;
+    div.onclick = () => { activeFilter = label; buildFilters(); renderList(); };
+    row.appendChild(div);
+  });
+}
+
+function renderList(flashRow) {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = items.filter(item => {
+    const mq = !q || item.desc.toLowerCase().includes(q) || item.bek.toLowerCase().includes(q);
+    const mf = activeFilter === 'All' || (item.storage || '').trim() === activeFilter;
+    return mq && mf;
+  });
+
+  const container = document.getElementById('itemList');
+  container.innerHTML = '';
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="no-items">No items match.</div>';
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(item => {
+    const g = (item.storage || 'Other').trim();
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(item);
+  });
+
+  Object.entries(groups).forEach(([grp, grpItems]) => {
+    const h = document.createElement('div');
+    h.className = 'grp-header';
+    h.textContent = grp;
+    container.appendChild(h);
+    grpItems.forEach(item => {
+      const row = document.createElement('div');
+      const isDone = updatedRows.has(item.row);
+      const isFlash = item.row === flashRow;
+      row.className = 'item-row' + (isDone ? ' done' : '');
+      const qClass = isFlash ? 'just' : (item.on_hand > 0 ? 'has' : '');
+      const flag = itemHasDiff(item) ? '<div class="i-flag" title="Doesn\'t match BEK Master">⚠️</div>' : '';
+      row.innerHTML = `
+        <div class="i-bek">${item.bek}</div>
+        <div class="i-desc">${item.desc}</div>
+        <div class="i-unit">${item.unit}</div>
+        ${flag}
+        <div class="i-qty ${qClass}">${item.on_hand}</div>
+        <div class="i-edit" onclick="event.stopPropagation(); openEditItem(${item.row})" title="Edit item">✎</div>`;
+      row.onclick = () => openConfirm(item, item.on_hand > 0 ? item.on_hand : 1);
+      container.appendChild(row);
+    });
+  });
+}
+
+function updateBadge() {
+  document.getElementById('updCt').textContent = updatedRows.size;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════════════
+function exportXLSX() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    [colLabels.bek || 'BEK #', colLabels.desc || 'Description', colLabels.storage || 'Storage', colLabels.unit || 'Unit', colLabels.on_hand || 'On Hand', 'Updated', 'Cost Mismatch'],
+    ...items.map(i => [i.bek, i.desc, i.storage, i.unit, i.on_hand, updatedRows.has(i.row) ? 'YES' : '', itemHasDiff(i) ? 'YES' : ''])
+  ]);
+  ws['!cols'] = [{ wch: 10 }, { wch: 45 }, { wch: 15 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 12 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+  XLSX.writeFile(wb, `DeliCount_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('📥 Exported!');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════════
+let _tt;
+function showToast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast up' + (err ? ' err' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); toggleVoice(); }
+  if (e.code === 'Enter' && pendingItem) { e.preventDefault(); confirmSave(); }
+  if (e.code === 'Escape') cancelConfirm();
+  if (e.code === 'ArrowUp') { e.preventDefault(); adj(1); }
+  if (e.code === 'ArrowDown') { e.preventDefault(); adj(-1); }
+});
+</script>
+</body>
+</html>
