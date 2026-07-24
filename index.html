@@ -1,40 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Deli Count — Keith's Superstores</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-:root{--bg:#0c0e14;--surface:#13161f;--surface2:#1c2030;--surface3:#242840;--border:#2a2f45;--accent:#f59e0b;--accent2:#fbbf24;--green:#10b981;--red:#ef4444;--blue:#60a5fa;--text:#e2e8f0;--muted:#4a5578;--dim:#8892b0;}
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100%;overflow:hidden;}
-#uploadScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;}
-.upload-logo{width:64px;height:64px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 24px;box-shadow:0 0 40px #f59e0b33;}
-.upload-title{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
-.upload-sub{font-size:14px;color:var(--dim);margin-bottom:36px;line-height:1.6;}
-.drop-zone{width:100%;max-width:460px;border:2px dashed var(--border);border-radius:16px;padding:40px 24px;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:var(--surface2);box-shadow:0 0 40px #f59e0b18;}
-.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.drop-icon{font-size:40px;margin-bottom:12px;}
-.drop-main{font-size:16px;font-weight:600;margin-bottom:6px;}
-.drop-hint{font-size:13px;color:var(--dim);}
-.drop-formats{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
-.fmt-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--dim);font-family:'JetBrains Mono',monospace;}
-.or-divider{color:var(--muted);font-size:13px;margin:20px 0;}
-.use-sample-btn{background:transparent;border:1px solid var(--border);color:var(--dim);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
-.use-sample-btn:hover{border-color:var(--accent);color:var(--accent);}
-.loading-bar{margin-top:20px;width:100%;max-width:460px;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;display:none;}
-.loading-bar-fill{height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width .5s;}
-.loading-msg{font-size:13px;color:var(--dim);margin-top:10px;display:none;}
-.modal-overlay{position:fixed;inset:0;background:#000a;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;display:none;}
-.modal-overlay.visible{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
-.modal-title{font-size:17px;font-weight:700;margin-bottom:6px;}
-.modal-sub{font-size:13px;color:var(--dim);margin-bottom:20px;}
-.map-row{margin-bottom:14px;}
-.map-label{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+https://claude.ai/chat/b7cbcd9d-1249-4ed3-bc26-f97abded35d0.map-label{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
 .map-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;cursor:pointer;}
 .map-select:focus{border-color:var(--accent)66;}
 .preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;overflow-x:auto;display:block;}
